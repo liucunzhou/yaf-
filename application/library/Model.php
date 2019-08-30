@@ -26,6 +26,8 @@ class Model
 
     public $preWhereIndex = 0;
 
+    public $exceptionMessage = '';
+
     public function __construct()
     {
         $this->db = DataBase::getInstance();
@@ -42,10 +44,13 @@ class Model
     {
         $this->presql = "select {$fields} from {$this->tableFullName} {$this->preWhereSql} {$this->preOrder} limit 1";
 
-        $stmt = $this->db->prepare($this->presql);
-        $stmt->execute($this->prexecute);
-        $this->data = $stmt->fetch(\PDO::FETCH_ASSOC);
-
+        try {
+            $stmt = $this->db->prepare($this->presql);
+            $stmt->execute($this->prexecute);
+            $this->data = $stmt->fetch(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $this->exceptionMessage = $e->getMessage();
+        }
         return $this;
     }
 
@@ -54,8 +59,6 @@ class Model
      */
     public function select($fields = "*")
     {
-        // $presql = $this->presql;
-
         $this->presql = "select {$fields} from {$this->tableFullName} {$this->preWhereSql} {$this->preOrder} {$this->preLimit}";
         $this->query($this->presql, $this->prexecute);
 
@@ -65,11 +68,13 @@ class Model
     public function count()
     {
         $this->presql = "select count(*) from {$this->tableFullName} {$this->preWhereSql} {$this->preLimit}";
-        $stmt = $this->db->prepare($this->presql);
-        $stmt->execute($this->prexecute);
-
-        $this->data = $stmt->fetch(\PDO::FETCH_ASSOC);
-
+        try {
+            $stmt = $this->db->prepare($this->presql);
+            $stmt->execute($this->prexecute);
+            $this->data = $stmt->fetch(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $this->exceptionMessage = $e->getMessage();
+        }
         return $this;
     }
 
@@ -81,10 +86,13 @@ class Model
         $setData = http_build_query($data, '', ',');
         $this->presql = "update {$this->tableFullName} set {$setData}  {$this->preWhereSql}";
 
-        $stmt = $this->db->prepare($this->presql);
-        $stmt->execute($this->prexecute);
-
-        $this->lastRowCount = $stmt->rowCount();
+        try {
+            $stmt = $this->db->prepare($this->presql);
+            $stmt->execute($this->prexecute);
+            $this->lastRowCount = $stmt->rowCount();
+        } catch (PDOException $e) {
+            $this->exceptionMessage = $e->getMessage();
+        }
 
         return $this;
     }
@@ -94,11 +102,13 @@ class Model
      */
     public function query($sql, $params = [])
     {
-        echo $sql;
-        print_r($params);
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($params);
-        $this->data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            $this->data = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            $this->exceptionMessage = $e->getMessage();
+        }
 
         return $this;
     }
@@ -119,15 +129,20 @@ class Model
 
         $prepare = http_build_query($data[0], '', ',');
         $sql = "insert into {$tableName} ({$fields}) values($prepare)";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute($data[1]);
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($data[1]);
+        } catch (PDOException $e) {
+            $this->exceptionMessage = $e->getMessage();
+        }
 
         return $this;
     }
 
     public function getData()
     {
-        return $this->data();
+        return $this->data;
     }
 
     /**
@@ -255,13 +270,12 @@ class Model
             }
         }
 
-    
         $sql = implode(" {$inner} ", $where);
-        
+
         if ($this->preWhereSql == '') {
-            $this->preWhereSql  .= $sql;
+            $this->preWhereSql  .= "where ({$sql})";
         } else {
-            $this->preWhereSql  .= " {$outer} " . $sql;
+            $this->preWhereSql  .= " {$outer} ({$sql})";
         }
         $this->prexecute = array_merge($this->prexecute, $params);
 

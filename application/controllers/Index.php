@@ -7,10 +7,6 @@
  */
 class IndexController extends Yaf_Controller_Abstract {
 
-    public function init() {
-
-    }
-
 	/**
      * 默认动作
      * Yaf支持直接把Yaf_Request_Abstract::getParam()得到的同名参数作为Action的形参
@@ -18,16 +14,9 @@ class IndexController extends Yaf_Controller_Abstract {
      */
 	public function indexAction() {
 
-        // $response->setBody("abc");
-        header("Content-type: application/json");
-        header('Access-Control-Allow-Headers: x-requested-with,content-type');
-        header('Access-Control-Allow-Origin:*');
-        $result = [
-            'code'   => '200',
-            'result' => '100',
-        ];
-        
-        $this->getResponse()->setBody(json_encode($result));
+        $redis = CRedis::getInstance();
+        $redis->get("");
+
         return false;
 
         $model = new AdminModel;
@@ -36,13 +25,12 @@ class IndexController extends Yaf_Controller_Abstract {
         $map = [];
         $map['id'] = 1;
         $map['status'] = ['in', [1,2,3,4,5,6]];
-        // $model->where($map)->order("id desc")->select();
-        $map2['id'] = 2;
-        $model->where($map,'and')->where($map, 'or', 'and')->where($map, 'and', 'or')->group();
+        $model->where($map)->find();
 
-        // echo "SQL:".$model->presql;
-        // echo "<br>";
-        // print_r($model->getData);
+
+        echo "SQL:".$model->presql;
+        echo "<br>";
+        print_r($model->getData());
         echo "<br>";
 
 		return false;
